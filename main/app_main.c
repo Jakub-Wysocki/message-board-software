@@ -23,6 +23,7 @@
 #include "mqtt_client.h"
 
 static const char *TAG = "MQTT_EXAMPLE";
+extern int EPD_7in5_V2_test();
 
 typedef struct displaying_data{
     char data[256];
@@ -135,8 +136,17 @@ void app_main(void)
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
      * examples/protocols/README.md for more information about this function.
      */
-    ESP_ERROR_CHECK(example_connect());
+    
+    
+    //ESP_ERROR_CHECK(example_connect());
 
+
+    EPD_7in5_V2_test();
+
+    while (1)
+    {
+    }
+    
 
     mqtt_app_start();
 }
