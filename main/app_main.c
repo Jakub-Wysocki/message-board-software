@@ -23,7 +23,7 @@
 #include "mqtt_client.h"
 
 static const char *TAG = "MQTT_EXAMPLE";
-extern int EPD_7in5_V2_test();
+extern void e_paper_task();
 
 typedef struct displaying_data{
     char data[256];
@@ -111,57 +111,21 @@ static void mqtt_app_start(void)
     esp_mqtt_client_start(client);
 }
 
-#define BLINK_GPIO 7
-
-
 void app_main(void)
 {
+    esp_log_level_set("*", ESP_LOG_VERBOSE);
+
     ESP_LOGI(TAG, "[APP] Startup..");
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
-
-    esp_log_level_set("*", ESP_LOG_INFO);
-    esp_log_level_set("MQTT_CLIENT", ESP_LOG_VERBOSE);
-    esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT_TCP", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT_SSL", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
-    esp_log_level_set("OUTBOX", ESP_LOG_VERBOSE);
 
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    
-    
     //ESP_ERROR_CHECK(example_connect());
-
-
-    EPD_7in5_V2_test();
-
-    while (1)
-    {
-    }
     
+    xTaskCreate(&e_paper_task, "epaper_task", 4 * 1024, NULL, 5, NULL);
 
-    mqtt_app_start();
+    //mqtt_app_start();
 }
-
-
-    //   gpio_reset_pin(BLINK_GPIO);
-    // /* Set the GPIO as a push/pull output */
-    // gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-    // while(1) {
-    //     /* Blink off (output low) */
-    //     printf("Turning off the LED\n");
-    //     gpio_set_level(BLINK_GPIO, 0);
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    //     /* Blink on (output high) */
-    //     printf("Turning on the LED\n");
-    //     gpio_set_level(BLINK_GPIO, 1);
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // }
