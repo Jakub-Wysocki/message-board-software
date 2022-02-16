@@ -21,22 +21,18 @@
 
 #include "esp_log.h"
 #include "mqtt_client.h"
+#include "esp_tls.h"
+
 
 static const char *TAG = "MQTT_EXAMPLE";
+#define EXAMPLE_BROKER_URI "mqtts://192.168.0.2"
+static const uint8_t s_key[] = { 0xBA, 0xD1, 0x23 };
 
-typedef struct displaying_data{
-    char data[256];
-} displaying_data;
-
-displaying_data mqtt_data;
-
-int mqtt_data_handling_function(displaying_data *mqtt_data, esp_mqtt_event_handle_t event)
-{
-    
-    strcpy(mqtt_data->data, event->data);
-
-    return 0;
-}
+static const psk_hint_key_t psk_hint_key = {
+        .key = s_key,
+        .key_size = sizeof(s_key),
+        .hint = "hint"
+        };
 
 static void log_error_if_nonzero(const char * message, int error_code)
 {
@@ -44,8 +40,7 @@ static void log_error_if_nonzero(const char * message, int error_code)
         ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
     }
 }
-
-static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
+static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 {
     esp_mqtt_client_handle_t client = event->client;
     int msg_id;
@@ -58,7 +53,7 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             
             break;
         case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED"); //print that device lost connection
+            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
             break;
 
         case MQTT_EVENT_SUBSCRIBED:
@@ -84,7 +79,6 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
                 log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
                 log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
                 ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
-
             }
             break;
         default:
@@ -94,64 +88,30 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     return ESP_OK;
 }
 
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
-    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
-    mqtt_event_handler_cb(event_data);
-}
+
+
 
 static void mqtt_app_start(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
-        .uri = CONFIG_BROKER_URL,
+        .uri = EXAMPLE_BROKER_URI,
+        .event_handle = mqtt_event_handler,
+        .psk_hint_key = &psk_hint_key,
+
     };
 
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
     esp_mqtt_client_start(client);
 }
-
-#define BLINK_GPIO 7
-
 
 void app_main(void)
 {
     ESP_LOGI(TAG, "[APP] Startup..");
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
-
-    esp_log_level_set("*", ESP_LOG_INFO);
-    esp_log_level_set("MQTT_CLIENT", ESP_LOG_VERBOSE);
-    esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT_TCP", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT_SSL", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
-    esp_log_level_set("OUTBOX", ESP_LOG_VERBOSE);
-
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
     ESP_ERROR_CHECK(example_connect());
-
-
     mqtt_app_start();
 }
-
-
-    //   gpio_reset_pin(BLINK_GPIO);
-    // /* Set the GPIO as a push/pull output */
-    // gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-    // while(1) {
-    //     /* Blink off (output low) */
-    //     printf("Turning off the LED\n");
-    //     gpio_set_level(BLINK_GPIO, 0);
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    //     /* Blink on (output high) */
-    //     printf("Turning on the LED\n");
-    //     gpio_set_level(BLINK_GPIO, 1);
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // }
