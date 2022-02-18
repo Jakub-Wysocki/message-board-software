@@ -54,27 +54,20 @@ void e_paper_task(void *pvParameter)
 
         .width = EPD_WIDTH,
         .height = EPD_HEIGHT,
-        .color_inv = 1,
+        .color_inv = 0,
     };
 
     while(1){
         ESP_LOGI(TAG, "Before ePaper driver init, heap: %d", esp_get_free_heap_size());
         device = iot_epaper_create(NULL, &epaper_conf);
-        iot_epaper_set_rotate(device, E_PAPER_ROTATE_270);
-        ESP_LOGI(TAG, "e-Paper Display Espressif logo");
-        iot_epaper_clear(device);
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-        
-
-        iot_epaper_clean_paint(device, COLORED);
-        iot_epaper_draw_string(device, 100, 100, "e-Paper Demo", &epaper_font_16, COLORED);
+                    
+        iot_epaper_clean_paint(device, UNCOLORED);
+        iot_epaper_draw_string(device, 50, 50, "Lodz Univeristy of Technology", &epaper_font_24, COLORED);
         
         
-        ESP_LOGI(TAG, "e-Paper Display Text");
         iot_epaper_display_frame(device, NULL); 
+        ESP_LOGI(TAG, "Done");
         iot_epaper_delete(device, true);
-
         vTaskDelay(1000 * 60 / portTICK_PERIOD_MS);
     }
 }

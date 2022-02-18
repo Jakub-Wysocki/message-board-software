@@ -165,7 +165,6 @@ static void iot_epaper_paint_init(epaper_handle_t dev, unsigned char* image, int
     epaper_dev_t* device = (epaper_dev_t*) dev;
     device->paint.rotate = E_PAPER_ROTATE_0;
     device->paint.image = image;
-    /* 1 byte = 8 pixels, so the width should be the multiple of 8 */
     device->paint.width = width % 8 ? width + 8 - (width % 8) : width;
     device->paint.height = height;
 }
@@ -193,7 +192,7 @@ static esp_err_t iot_epaper_spi_init(epaper_handle_t dev, spi_device_handle_t *e
         .quadhd_io_num = -1,
         // The maximum size sent below covers the case
         // when the whole frame buffer is transferred to the slave
-        .max_transfer_sz = EPD_WIDTH * EPD_HEIGHT / 8,
+        .max_transfer_sz = EPD_WIDTH * EPD_HEIGHT / 3,
     };
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = pin->clk_freq_hz,
@@ -643,7 +642,10 @@ void iot_epaper_display_frame(epaper_handle_t dev, const unsigned char* frame_bu
         xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
 
         iot_epaper_send_command(dev, 0x13);
-        iot_epaper_send_data(dev, frame_buffer, EPD_HEIGHT*EPD_WIDTH / 8);
+        iot_epaper_send_data(dev, frame_buffer, EPD_HEIGHT*EPD_WIDTH/8);
+        
+        for(int i = 48000; i > 0 ; i--)
+            iot_epaper_send_byte(dev, 0x00);
 
         iot_turn_on_display(dev);
 
