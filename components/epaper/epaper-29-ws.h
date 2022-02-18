@@ -39,29 +39,6 @@ typedef struct
 #define EPD_WIDTH       800
 #define EPD_HEIGHT      480
 
-// Display CONTROLLER COMMANDS
-#define E_PAPER_DRIVER_OUTPUT_CONTROL                       0x01
-#define E_PAPER_BOOSTER_SOFT_START_CONTROL                  0x0C
-#define E_PAPER_GATE_SCAN_START_POSITION                    0x0F
-#define E_PAPER_DEEP_SLEEP_MODE                             0x10
-#define E_PAPER_DATA_ENTRY_MODE_SETTING                     0x11
-#define E_PAPER_SW_RESET                                    0x12
-#define E_PAPER_TEMPERATURE_SENSOR_CONTROL                  0x1A
-#define E_PAPER_MASTER_ACTIVATION                           0x20
-#define E_PAPER_DISPLAY_UPDATE_CONTROL_1                    0x21
-#define E_PAPER_DISPLAY_UPDATE_CONTROL_2                    0x22
-#define E_PAPER_WRITE_RAM                                   0x24
-#define E_PAPER_WRITE_VCOM_REGISTER                         0x2C
-#define E_PAPER_WRITE_LUT_REGISTER                          0x32
-#define E_PAPER_SET_DUMMY_LINE_PERIOD                       0x3A
-#define E_PAPER_SET_GATE_TIME                               0x3B
-#define E_PAPER_BORDER_WAVEFORM_CONTROL                     0x3C
-#define E_PAPER_SET_RAM_X_ADDRESS_START_END_POSITION        0x44
-#define E_PAPER_SET_RAM_Y_ADDRESS_START_END_POSITION        0x45
-#define E_PAPER_SET_RAM_X_ADDRESS_COUNTER                   0x4E
-#define E_PAPER_SET_RAM_Y_ADDRESS_COUNTER                   0x4F
-#define E_PAPER_TERMINATE_FRAME_READ_WRITE                  0xFF
-
 /* Paint properties */
 typedef struct {
     unsigned char* image;
@@ -95,6 +72,10 @@ typedef struct {
 
 typedef void* epaper_handle_t; /*handle of epaper*/
 
+
+void iot_epaper_clear(epaper_handle_t dev);
+
+void iot_turn_on_display(epaper_handle_t dev);
 /**
  * @brief Create and init epaper and return a epaper handle
  *
@@ -255,60 +236,6 @@ void iot_epaper_draw_horizontal_line(epaper_handle_t dev, int x, int y,
  */
 void iot_epaper_draw_vertical_line(epaper_handle_t dev, int x, int y,
         int height, int colored);
-
-/**
- * @brief   draw rectangle point(x0,y0) (x1,y1) and save on display data array,
- *          screen will display when call iot_epaper_display_frame function.
- *
- * @param  dev object handle of epaper
- * @param  x0 point(x0,y0)
- * @param  y0 point(x0,y0)
- * @param  x1 point(x1,y1)
- * @param  y1 point(x1,y1)
- * @param  colored display color
- */
-void iot_epaper_draw_rectangle(epaper_handle_t dev, int x0, int y0, int x1,
-        int y1, int colored);
-
-/**
- * @brief   draw fill rectangle point(x0,y0) (x1,y1) and save on display data array,
- *          screen will display when call iot_epaper_display_frame function.
- *
- * @param  dev object handle of epaper
- * @param  x0 point(x0,y0)
- * @param  y0 point(x0,y0)
- * @param  x1 point(x1,y1)
- * @param  y1 point(x1,y1)
- * @param  colored display color
- */
-void ior_epaper_draw_filled_rectangle(epaper_handle_t dev, int x0, int y0,
-        int x1, int y1, int colored);
-
-/**
- * @brief   draw a circle at point(x,y) and save on display data array,
- *          screen will display when call iot_epaper_display_frame function.
- *
- * @param  dev object handle of epaper
- * @param  x point(x,y)
- * @param  y point(x,y)
- * @param  colored display color
- */
-void iot_epaper_draw_circle(epaper_handle_t dev, int x, int y, int radius,
-        int colored);
-
-/**
- * @brief   draw a fill circle at point(x,y) and save on display data array,
- *          screen will display when call iot_epaper_display_frame function.
- *
- * @param  dev object handle of epaper
- * @param  x point(x,y)
- * @param  y point(x,y)
- * @param  radius radius of the circle
- * @param  colored display color
- */
-void iot_epaper_draw_filled_circle(epaper_handle_t dev, int x, int y,
-        int radius, int colored);
-
 /**
  * @brief  wait until idle
  * @param  dev object handle of epaper

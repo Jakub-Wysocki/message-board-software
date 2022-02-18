@@ -33,21 +33,59 @@ static const char* TAG = "ePaper Driver";
 
 #define EPAPER_QUE_SIZE_DEFAULT 10
 
-const unsigned char lut_full_update[] =
-{
-    0x02, 0x02, 0x01, 0x11, 0x12, 0x12, 0x22, 0x22,
-    0x66, 0x69, 0x69, 0x59, 0x58, 0x99, 0x99, 0x88,
-    0x00, 0x00, 0x00, 0x00, 0xF8, 0xB4, 0x13, 0x51,
-    0x35, 0x51, 0x51, 0x19, 0x01, 0x00
+
+uint8_t Voltage_Frame_7IN5_V2[]={
+	0x6, 0x3F, 0x3F, 0x11, 0x24, 0x7, 0x17,
 };
 
-// This LUT is not yet used in the code below
-const unsigned char lut_partial_update[] =
-{
-    0x10, 0x18, 0x18, 0x08, 0x18, 0x18, 0x08, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x13, 0x14, 0x44, 0x12,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+uint8_t LUT_VCOM_7IN5_V2[]={	
+	0x0,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x0,	0xF,	0x1,	0xF,	0x1,	0x2,	
+	0x0,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+};						
+
+uint8_t LUT_WW_7IN5_V2[]={	
+	0x10,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x84,	0xF,	0x1,	0xF,	0x1,	0x2,	
+	0x20,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+};
+
+uint8_t LUT_BW_7IN5_V2[]={	
+	0x10,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x84,	0xF,	0x1,	0xF,	0x1,	0x2,	
+	0x20,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+};
+
+uint8_t LUT_WB_7IN5_V2[]={	
+	0x80,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x84,	0xF,	0x1,	0xF,	0x1,	0x2,	
+	0x40,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+};
+
+uint8_t LUT_BB_7IN5_V2[]={	
+	0x80,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x84,	0xF,	0x1,	0xF,	0x1,	0x2,	
+	0x40,	0xF,	0xF,	0x0,	0x0,	0x1,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
+	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	
 };
 
 static portMUX_TYPE epaper_spinlock = portMUX_INITIALIZER_UNLOCKED;
@@ -118,8 +156,6 @@ static void iot_epaper_send_data(epaper_handle_t dev, const uint8_t *data, int l
     epaper_dev_t* device = (epaper_dev_t*) dev;
     device->dc.dc_io = device->pin.dc_pin;
     device->dc.dc_level = device->pin.dc_lev_data;
-    // To Do: original driver was sending byte by byte
-    // Pay attention to possible performance issues
     iot_epaper_send(device->bus, data, length, &device->dc);
     ESP_LOGI(TAG, "SPI data sent %d", length);
 }
@@ -136,15 +172,12 @@ static void iot_epaper_paint_init(epaper_handle_t dev, unsigned char* image, int
 
 static void iot_epaper_gpio_init(epaper_conf_t * pin)
 {
-    //gpio_pad_select_gpio(pin->reset_pin);
     gpio_set_direction(pin->reset_pin, GPIO_MODE_OUTPUT);
     gpio_set_level(pin->reset_pin, pin->rst_active_level);
-    //gpio_pad_select_gpio(pin->dc_pin);
     gpio_set_direction(pin->dc_pin, GPIO_MODE_OUTPUT);
     gpio_set_level(pin->dc_pin, 1);
     ets_delay_us(10000);
     gpio_set_level(pin->dc_pin, 0);
-    //gpio_pad_select_gpio(pin->busy_pin);
     gpio_set_direction(pin->busy_pin, GPIO_MODE_INPUT);
     gpio_set_pull_mode(pin->busy_pin, GPIO_PULLUP_ONLY);
 }
@@ -180,14 +213,32 @@ static esp_err_t iot_epaper_spi_init(epaper_handle_t dev, spi_device_handle_t *e
     return ret;
 }
 
-static void iot_epaper_set_lut(epaper_handle_t dev)
+
+static void iot_7in5_v2_lut(epaper_handle_t dev, uint8_t* lut_vcom,  uint8_t* lut_ww, uint8_t* lut_bw, uint8_t* lut_wb, uint8_t* lut_bb)
 {
-    epaper_dev_t* device = (epaper_dev_t*) dev;
-    xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
-    iot_epaper_send_command(dev, E_PAPER_WRITE_LUT_REGISTER);
-    iot_epaper_send_data(dev, lut_full_update, sizeof(lut_full_update));
-    xSemaphoreGiveRecursive(device->spi_mux);
+    uint8_t count;
+    
+	iot_epaper_send_command(dev, 0x20); //VCOM	
+	for(count=0; count<42; count++)
+		iot_epaper_send_byte(dev, lut_vcom[count]);
+
+	iot_epaper_send_command(dev, 0x21); //LUTBW
+	for(count=0; count<42; count++)
+		iot_epaper_send_byte(dev, lut_ww[count]);
+
+	iot_epaper_send_command(dev, 0x22); //LUTBW
+	for(count=0; count<42; count++)
+		iot_epaper_send_byte(dev, lut_bw[count]);
+
+	iot_epaper_send_command(dev, 0x23); //LUTWB
+	for(count=0; count<42; count++)
+		iot_epaper_send_byte(dev, lut_wb[count]);
+
+	iot_epaper_send_command(dev, 0x24); //LUTBB
+	for(count=0; count<42; count++)
+		iot_epaper_send_byte(dev, lut_bb[count]);
 }
+
 
 static void iot_epaper_epd_init(epaper_handle_t dev)
 {
@@ -199,29 +250,57 @@ static void iot_epaper_epd_init(epaper_handle_t dev)
     /* This part of code is ePaper module specific
      * It has been copied from the instructions as it is
      */
-    iot_epaper_send_command(dev, E_PAPER_DRIVER_OUTPUT_CONTROL);
-    iot_epaper_send_byte(dev, (EPD_HEIGHT - 1) & 0xff);
-    iot_epaper_send_byte(dev, ((EPD_HEIGHT - 1) >> 8) & 0xff);
-    iot_epaper_send_byte(dev, 0x00);    // GD = 0; SM = 0; TB = 0
+    iot_epaper_send_command(dev, 0x01);
+    iot_epaper_send_byte(dev, 0x17);
+    iot_epaper_send_byte(dev, *(Voltage_Frame_7IN5_V2+6));
+    iot_epaper_send_byte(dev, *(Voltage_Frame_7IN5_V2+1));
+    iot_epaper_send_byte(dev, *(Voltage_Frame_7IN5_V2+2));
+    iot_epaper_send_byte(dev, *(Voltage_Frame_7IN5_V2+3));
 
-    iot_epaper_send_command(dev, E_PAPER_BOOSTER_SOFT_START_CONTROL);
-    iot_epaper_send_byte(dev, 0xD7);
-    iot_epaper_send_byte(dev, 0xD6);
-    iot_epaper_send_byte(dev, 0x9D);
+    iot_epaper_send_command(dev, 0x82);
+    iot_epaper_send_byte(dev, *(Voltage_Frame_7IN5_V2+4));
 
-    iot_epaper_send_command(dev, E_PAPER_WRITE_VCOM_REGISTER);
-    iot_epaper_send_byte(dev, 0xA8);    // VCOM 7C
+    iot_epaper_send_command(dev, 0x06);
+    iot_epaper_send_byte(dev, 0x27);
+    iot_epaper_send_byte(dev, 0x27);
+    iot_epaper_send_byte(dev, 0x2f);
+    iot_epaper_send_byte(dev, 0x17);
 
-    iot_epaper_send_command(dev, E_PAPER_SET_DUMMY_LINE_PERIOD);
-    iot_epaper_send_byte(dev, 0x1A);    // 4 dummy lines per gate
+    iot_epaper_send_command(dev, 0x30);
+    iot_epaper_send_byte(dev, *(Voltage_Frame_7IN5_V2+0));
 
-    iot_epaper_send_command(dev, E_PAPER_SET_GATE_TIME);
-    iot_epaper_send_byte(dev, 0x08);    // 2us per line
+    iot_epaper_send_command(dev, 0x04);
 
-    iot_epaper_send_command(dev, E_PAPER_DATA_ENTRY_MODE_SETTING);
-    iot_epaper_send_byte(dev, 0x03);    // X increment; Y increment
+    vTaskDelay(100 / portTICK_RATE_MS);
 
-    iot_epaper_set_lut(dev);
+    iot_epaper_wait_idle(dev);
+
+    iot_epaper_send_command(dev, 0x00);
+    iot_epaper_send_byte(dev, 0x3f);
+
+    iot_epaper_send_command(dev, 0x61);
+    iot_epaper_send_byte(dev, 0x03);
+    iot_epaper_send_byte(dev, 0x20);
+    iot_epaper_send_byte(dev, 0x01);
+    iot_epaper_send_byte(dev, 0xe0);
+
+    iot_epaper_send_command(dev, 0x15);
+    iot_epaper_send_byte(dev, 0x00);
+
+    iot_epaper_send_command(dev, 0x50);
+    iot_epaper_send_byte(dev, 0x10);
+    iot_epaper_send_byte(dev, 0x00);
+
+    iot_epaper_send_command(dev, 0x60);
+    iot_epaper_send_byte(dev, 0x22);
+
+    iot_epaper_send_command(dev, 0x65);
+    iot_epaper_send_byte(dev, 0x00);
+    iot_epaper_send_byte(dev, 0x00);
+    iot_epaper_send_byte(dev, 0x00);
+    iot_epaper_send_byte(dev, 0x00);
+
+    iot_7in5_v2_lut(dev, LUT_VCOM_7IN5_V2, LUT_WW_7IN5_V2, LUT_BW_7IN5_V2, LUT_WB_7IN5_V2, LUT_BB_7IN5_V2);
     xSemaphoreGiveRecursive(device->spi_mux);
 }
 
@@ -241,7 +320,7 @@ epaper_handle_t iot_epaper_create(spi_device_handle_t bus, epaper_conf_t *epconf
     if (bus) {
         dev->bus = bus;
     } else {
-        iot_epaper_spi_init(dev, &dev->bus, epconf);
+        iot_epaper_spi_init(dev, &(dev->bus), epconf);
         ESP_LOGD(TAG, "spi init ok");
     }
     dev->pin = *epconf;
@@ -360,6 +439,31 @@ void iot_epaper_clean_paint(epaper_handle_t dev, int colored)
     xSemaphoreGiveRecursive(device->spi_mux);
 }
 
+void iot_epaper_clear(epaper_handle_t dev)
+{
+
+    uint32_t Width, Height;
+    Width = EPD_WIDTH / 8 ;
+    Height = EPD_HEIGHT;
+
+    uint16_t i;
+    iot_epaper_send_command(dev, 0x10);
+    for(i=0; i<Height*Width; i++) {
+        iot_epaper_send_byte(dev, 0xFF);
+    }
+    iot_epaper_send_command(dev, 0x13);
+    for(i=0; i<Height*Width; i++)	{
+        iot_epaper_send_byte(dev, 0x00);
+    }
+    iot_turn_on_display(dev);
+
+}
+void iot_turn_on_display(epaper_handle_t dev)
+{
+    iot_epaper_send_command(dev, 0x12);
+    vTaskDelay(100/ portTICK_RATE_MS);
+    iot_epaper_wait_idle(dev);
+}
 /**
  *  @brief: this displays a string on the frame buffer but not refresh
  */
@@ -503,108 +607,6 @@ void iot_epaper_draw_vertical_line(epaper_handle_t dev, int x, int y, int height
     xSemaphoreGiveRecursive(device->spi_mux);
 }
 
-/**
- *  @brief: this draws a rectangle
- */
-void iot_epaper_draw_rectangle(epaper_handle_t dev, int x0, int y0, int x1, int y1, int colored)
-{
-    int min_x, min_y, max_x, max_y;
-    min_x = x1 > x0 ? x0 : x1;
-    max_x = x1 > x0 ? x1 : x0;
-    min_y = y1 > y0 ? y0 : y1;
-    max_y = y1 > y0 ? y1 : y0;
-    epaper_dev_t* device = (epaper_dev_t*) dev;
-    xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
-    iot_epaper_draw_horizontal_line(dev, min_x, min_y, max_x - min_x + 1, colored);
-    iot_epaper_draw_horizontal_line(dev, min_x, max_y, max_x - min_x + 1, colored);
-    iot_epaper_draw_vertical_line(dev, min_x, min_y, max_y - min_y + 1, colored);
-    iot_epaper_draw_vertical_line(dev, max_x, min_y, max_y - min_y + 1, colored);
-    xSemaphoreGiveRecursive(device->spi_mux);
-}
-
-/**
- *  @brief: this draws a filled rectangle
- */
-void ior_epaper_draw_filled_rectangle(epaper_handle_t dev, int x0, int y0, int x1, int y1, int colored)
-{
-    int min_x, min_y, max_x, max_y;
-    int i;
-    min_x = x1 > x0 ? x0 : x1;
-    max_x = x1 > x0 ? x1 : x0;
-    min_y = y1 > y0 ? y0 : y1;
-    max_y = y1 > y0 ? y1 : y0;
-    epaper_dev_t* device = (epaper_dev_t*) dev;
-    xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
-    for (i = min_x; i <= max_x; i++) {
-        iot_epaper_draw_vertical_line(dev, i, min_y, max_y - min_y + 1, colored);
-    }
-    xSemaphoreGiveRecursive(device->spi_mux);
-}
-
-/**
- *  @brief: this draws a circle
- */
-void iot_epaper_draw_circle(epaper_handle_t dev, int x, int y, int radius,
-        int colored)
-{
-    /* Bresenham algorithm */
-    int x_pos = -radius;
-    int y_pos = 0;
-    int err = 2 - 2 * radius;
-    int e2;
-    epaper_dev_t* device = (epaper_dev_t*) dev;
-    xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
-    do {
-        iot_epaper_draw_pixel(dev, x - x_pos, y + y_pos, colored);
-        iot_epaper_draw_pixel(dev, x + x_pos, y + y_pos, colored);
-        iot_epaper_draw_pixel(dev, x + x_pos, y - y_pos, colored);
-        iot_epaper_draw_pixel(dev, x - x_pos, y - y_pos, colored);
-        e2 = err;
-        if (e2 <= y_pos) {
-            err += ++y_pos * 2 + 1;
-            if (-x_pos == y_pos && e2 <= x_pos) {
-                e2 = 0;
-            }
-        }
-        if (e2 > x_pos) {
-            err += ++x_pos * 2 + 1;
-        }
-    } while (x_pos <= 0);
-    xSemaphoreGiveRecursive(device->spi_mux);
-}
-
-/**
- *  @brief: this draws a filled circle
- */
-void iot_epaper_draw_filled_circle(epaper_handle_t dev, int x, int y, int radius, int colored)
-{
-    /* Bresenham algorithm */
-    int x_pos = -radius;
-    int y_pos = 0;
-    int err = 2 - 2 * radius;
-    int e2;
-    epaper_dev_t* device = (epaper_dev_t*) dev;
-    xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
-    do {
-        iot_epaper_draw_pixel(dev, x - x_pos, y + y_pos, colored);
-        iot_epaper_draw_pixel(dev, x + x_pos, y + y_pos, colored);
-        iot_epaper_draw_pixel(dev, x + x_pos, y - y_pos, colored);
-        iot_epaper_draw_pixel(dev, x - x_pos, y - y_pos, colored);
-        iot_epaper_draw_horizontal_line(dev, x + x_pos, y + y_pos, 2 * (-x_pos) + 1, colored);
-        iot_epaper_draw_horizontal_line(dev, x + x_pos, y - y_pos, 2 * (-x_pos) + 1, colored);
-        e2 = err;
-        if (e2 <= y_pos) {
-            err += ++y_pos * 2 + 1;
-            if (-x_pos == y_pos && e2 <= x_pos) {
-                e2 = 0;
-            }
-        }
-        if (e2 > x_pos) {
-            err += ++x_pos * 2 + 1;
-        }
-    } while (x_pos <= 0);
-    xSemaphoreGiveRecursive(device->spi_mux);
-}
 
 void iot_epaper_wait_idle(epaper_handle_t dev)
 {
@@ -627,69 +629,36 @@ void iot_epaper_reset(epaper_handle_t dev)
     xSemaphoreGiveRecursive(device->spi_mux);
 }
 
-/* This function has been exposed to implement partial updates of the image
- * To Do: implement partial updates of the image
- */
-void iot_set_ram_area(epaper_handle_t dev, int x_start, int y_start, int x_end, int y_end)
-{
-    iot_epaper_send_command(dev, E_PAPER_SET_RAM_X_ADDRESS_START_END_POSITION);
-    iot_epaper_send_byte(dev, x_start >> 3);  // 8 pixels per byte
-    iot_epaper_send_byte(dev, x_end   >> 3);  // 8 pixels per byte
-    iot_epaper_send_command(dev, E_PAPER_SET_RAM_Y_ADDRESS_START_END_POSITION);
-    iot_epaper_send_byte(dev, y_start & 0xff);
-    iot_epaper_send_byte(dev, y_start >> 8);
-    iot_epaper_send_byte(dev, y_end & 0xff);
-    iot_epaper_send_byte(dev, y_end   >> 8);
-}
-
-/* This function has been exposed to implement partial updates of the image
- * To Do: implement partial updates of the image
- */
-void iot_set_ram_address_counter(epaper_handle_t dev, int x, int y)
-{
-    iot_epaper_send_command(dev, E_PAPER_SET_RAM_X_ADDRESS_COUNTER);
-    iot_epaper_send_byte(dev, x >> 3);  // 8 pixels per byte
-    iot_epaper_send_command(dev, E_PAPER_SET_RAM_Y_ADDRESS_COUNTER);
-    iot_epaper_send_byte(dev, y & 0xff);
-    iot_epaper_send_byte(dev, y >> 8);
-}
-
 /* This transfer to the display the whole image frame
- * To Do: implement partial updates of the image
  */
 void iot_epaper_display_frame(epaper_handle_t dev, const unsigned char* frame_buffer)
-{
+{   
     epaper_dev_t* device = (epaper_dev_t*) dev;
-    if (frame_buffer == NULL) {
+    if(frame_buffer == NULL)
+    {
         frame_buffer = device->paint.image;
     }
-    xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
+
     if (frame_buffer != NULL) {
+        xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
 
-        // configure ePaper's memory to send data
-        iot_set_ram_area(dev, 0, 0, EPD_WIDTH-1, EPD_HEIGHT-1);
-        iot_set_ram_address_counter(dev, 0, 0);
+        iot_epaper_send_command(dev, 0x13);
+        iot_epaper_send_data(dev, frame_buffer, EPD_HEIGHT*EPD_WIDTH / 8);
 
-        // send image data
-        iot_epaper_send_command(dev, E_PAPER_WRITE_RAM);
-        iot_epaper_send_data(dev, frame_buffer, device->paint.width / 8 * device->paint.height);
+        iot_turn_on_display(dev);
 
-        // update display
-        iot_epaper_send_command(dev, E_PAPER_DISPLAY_UPDATE_CONTROL_2);
-        iot_epaper_send_byte(dev, 0xC4);
-        iot_epaper_send_command(dev, E_PAPER_MASTER_ACTIVATION);
-        iot_epaper_send_command(dev, E_PAPER_TERMINATE_FRAME_READ_WRITE);
-        iot_epaper_wait_idle(dev);
+        xSemaphoreGiveRecursive(device->spi_mux);
     }
-    xSemaphoreGiveRecursive(device->spi_mux);
 }
 
 void iot_epaper_sleep(epaper_handle_t dev)
 {
     epaper_dev_t* device = (epaper_dev_t*) dev;
     xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
-    iot_epaper_send_command(dev, E_PAPER_DEEP_SLEEP_MODE);
+    iot_epaper_send_command(dev, 0x02);
     iot_epaper_wait_idle(dev);
+    iot_epaper_send_command(dev, 0x07);
+    iot_epaper_send_byte(dev, 0xA5);
     xSemaphoreGiveRecursive(device->spi_mux);
 }
 
