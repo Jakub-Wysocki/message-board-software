@@ -8613,3 +8613,4 @@ epaper_font_t epaper_font_24 = {
     Font24_Table,
 };
 
+epaper_font_t *epaper_font_array[] = { &epaper_font_8,  &epaper_font_12,  &epaper_font_16, &epaper_font_20, &epaper_font_24};

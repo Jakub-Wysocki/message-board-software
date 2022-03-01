@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdlib.h>
 #include "esp_wifi.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
@@ -21,23 +22,11 @@
 
 #include "esp_log.h"
 #include "mqtt_client.h"
+#include "app_main.h"
 
 static const char *TAG = "MQTT_EXAMPLE";
-extern void e_paper_task();
-
-typedef struct displaying_data{
-    char data[256];
-} displaying_data;
 
 displaying_data mqtt_data;
-
-int mqtt_data_handling_function(displaying_data *mqtt_data, esp_mqtt_event_handle_t event)
-{
-    
-    strcpy(mqtt_data->data, event->data);
-
-    return 0;
-}
 
 static void log_error_if_nonzero(const char * message, int error_code)
 {
@@ -46,7 +35,7 @@ static void log_error_if_nonzero(const char * message, int error_code)
     }
 }
 
-static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
+static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 {
     esp_mqtt_client_handle_t client = event->client;
     int msg_id;
@@ -54,18 +43,18 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-            msg_id = esp_mqtt_client_subscribe(client, "/eink", 0);
+            msg_id = esp_mqtt_client_subscribe(client, "/eink/message", 0);
             ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-            
+            msg_id = esp_mqtt_client_subscribe(client, "/eink/time", 0);
+            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+            msg_id = esp_mqtt_client_subscribe(client, "/eink/font-size", 0);
+            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
             break;
         case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED"); //print that device lost connection
+            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED"); 
             break;
-
         case MQTT_EVENT_SUBSCRIBED:
             ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-            msg_id = esp_mqtt_client_publish(client, "/eink", "eink connected", 0, 0, 0);
-            ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
             break;
         case MQTT_EVENT_UNSUBSCRIBED:
             ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
@@ -77,6 +66,27 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             ESP_LOGI(TAG, "MQTT_EVENT_DATA");
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
+            
+              if (strncmp(event->topic,"/eink/message", event->topic_len) == 0)
+                {
+                    strcpy(mqtt_data.data, event->data);
+                    mqtt_data.data_len = event->data_len;
+                    ESP_LOGI(TAG, "CHANGED MESSAGE");
+                }
+                else if(strncmp(event->topic,"/eink/time", event->topic_len) == 0)
+                {
+                    mqtt_data.display_time = (int) strtol(event->data, NULL, 10);
+                    ESP_LOGI(TAG, "CHANGED TIME");
+                }
+                else if(strncmp(event->topic,"/eink/font-size", event->topic_len) == 0)
+                {
+                    mqtt_data.font = (short) strtol(event->data, NULL, 10) % 5;
+                    ESP_LOGI(TAG, "CHANGED FONT - TODO");
+                }
+                else{
+                    ESP_LOGI(TAG, "WRONG MQTT DATA");
+                }
+                   
             break;
         case MQTT_EVENT_ERROR:
             ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -95,19 +105,15 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     return ESP_OK;
 }
 
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
-    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
-    mqtt_event_handler_cb(event_data);
-}
-
 static void mqtt_app_start(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
-        .uri = CONFIG_BROKER_URL,
+        .uri = URI,
+        .event_handle = mqtt_event_handler,
     };
 
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
     esp_mqtt_client_start(client);
 }
 
@@ -123,9 +129,18 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    //ESP_ERROR_CHECK(example_connect());
-    
-    xTaskCreate(&e_paper_task, "epaper_task", 4 * 1024, NULL, 5, NULL);
+    mqtt_data = (displaying_data){
+        .data = "Example String",
+        .data_len = sizeof("Example String"),
+        .display_time = 30,
+        .font = 2,
+    };
 
-    //mqtt_app_start();
+
+    ESP_ERROR_CHECK(example_connect());
+
+    mqtt_app_start();
+    
+    xTaskCreate(&e_paper_task, "epaper_task", 4 * 1024, &mqtt_data, 5, NULL);
+
 }

@@ -165,8 +165,8 @@ static void iot_epaper_paint_init(epaper_handle_t dev, unsigned char* image, int
     epaper_dev_t* device = (epaper_dev_t*) dev;
     device->paint.rotate = E_PAPER_ROTATE_0;
     device->paint.image = image;
-    device->paint.width = width % 8 ? width + 8 - (width % 8) : width;
-    device->paint.height = height;
+    device->paint.width = 800;
+    device->paint.height = 480;
 }
 
 static void iot_epaper_gpio_init(epaper_conf_t * pin)
@@ -192,7 +192,7 @@ static esp_err_t iot_epaper_spi_init(epaper_handle_t dev, spi_device_handle_t *e
         .quadhd_io_num = -1,
         // The maximum size sent below covers the case
         // when the whole frame buffer is transferred to the slave
-        .max_transfer_sz = EPD_WIDTH * EPD_HEIGHT / 3,
+        .max_transfer_sz = EPD_WIDTH * EPD_HEIGHT /8,
     };
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = pin->clk_freq_hz,
@@ -305,7 +305,6 @@ static void iot_epaper_epd_init(epaper_handle_t dev)
 
 epaper_handle_t iot_epaper_create(spi_device_handle_t bus, epaper_conf_t *epconf)
 {
-    ESP_LOGD(TAG, "INSIDE IOT_EPAPER_CREATE_FUN");
     epaper_dev_t* dev = (epaper_dev_t*) calloc(1, sizeof(epaper_dev_t));
     dev->spi_mux = xSemaphoreCreateRecursiveMutex();
     uint8_t* frame_buf = (unsigned char*) heap_caps_malloc(
@@ -481,7 +480,7 @@ void iot_epaper_draw_string(epaper_handle_t dev, int x, int y, const char* text,
         refcolumn += font->width;
         /* Point on the next character */
         p_text++;
-        counter++;
+        counter++; //this seems to be useless
     }
     xSemaphoreGiveRecursive(device->spi_mux);
 }
@@ -642,11 +641,11 @@ void iot_epaper_display_frame(epaper_handle_t dev, const unsigned char* frame_bu
         xSemaphoreTakeRecursive(device->spi_mux, portMAX_DELAY);
 
         iot_epaper_send_command(dev, 0x13);
-        iot_epaper_send_data(dev, frame_buffer, EPD_HEIGHT*EPD_WIDTH/8);
-        
-        for(int i = 48000; i > 0 ; i--)
-            iot_epaper_send_byte(dev, 0x00);
 
+        //for some reason you cannot send all 48000 bytes at once. You need to split it in parts. 12kB works well
+        for(int i = 0; i < 48000; i+= 12000)
+            iot_epaper_send_data(dev, frame_buffer+i , 12000);
+        
         iot_turn_on_display(dev);
 
         xSemaphoreGiveRecursive(device->spi_mux);

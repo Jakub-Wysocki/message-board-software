@@ -24,6 +24,7 @@ extern epaper_font_t epaper_font_20;
 extern epaper_font_t epaper_font_16;
 extern epaper_font_t epaper_font_12;
 extern epaper_font_t epaper_font_8;
+extern epaper_font_t* epaper_font_array[];
 
 #endif
 
