@@ -32,7 +32,7 @@ extern const unsigned char IMAGE_DATA[];
 void e_paper_task(void *pvParameter)
 {
     epaper_handle_t device = NULL;
-    displaying_data *data_ptr = (displaying_data *)pvParameter;
+    ms_board_configuration *data_ptr = (ms_board_configuration *)pvParameter;
 
     epaper_conf_t epaper_conf = {
         .busy_pin = BUSY_PIN,
