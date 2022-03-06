@@ -25,6 +25,7 @@
 #include "app_main.h"
 
 static const char *TAG = "MQTT_EXAMPLE";
+static const char *PASSWORD = "password";
 
 ms_board_configuration mqtt_data;
 
@@ -51,9 +52,20 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
         msg_id = esp_mqtt_client_subscribe(client, "/eink/font-size", 0);
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+        msg_id = esp_mqtt_client_subscribe(client, "/eink/password", 0);
+        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+
+        strcpy(mqtt_data.data, "Device connected. No message");
+        mqtt_data.data_len = strlen("Device connected. No message");
+
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+
+        mqtt_data.locked = true;
+        strcpy(mqtt_data.data, "Display not connected to a mqtt server");
+        ESP_LOGI(TAG, "Device locked");
+
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
@@ -69,21 +81,40 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
 
-        if (strncmp(event->topic, "/eink/message", event->topic_len) == 0)
+        if (strncmp(event->topic, "/eink/password", event->topic_len) == 0)
         {
-            strcpy(mqtt_data.data, event->data);
-            mqtt_data.data_len = event->data_len;
-            ESP_LOGI(TAG, "CHANGED MESSAGE");
+            if (strncmp(event->data, PASSWORD, event->data_len) == 0)
+            {
+                mqtt_data.locked = false;
+                ESP_LOGI(TAG, "Access granted!");
+            }
+            else
+                ESP_LOGI(TAG, "Wrong password!");
+        }
+        else if (strncmp(event->topic, "/eink/message", event->topic_len) == 0)
+        {
+            if (mqtt_data.locked == false)
+            {
+                strncpy(mqtt_data.data, event->data, event->data_len);
+                mqtt_data.data_len = event->data_len;
+                ESP_LOGI(TAG, "CHANGED MESSAGE");
+            }
         }
         else if (strncmp(event->topic, "/eink/time", event->topic_len) == 0)
         {
-            mqtt_data.display_time = (int)strtol(event->data, NULL, 10);
-            ESP_LOGI(TAG, "CHANGED TIME");
+            if (mqtt_data.locked == false)
+            {
+                mqtt_data.display_time = (int)strtol(event->data, NULL, 10);
+                ESP_LOGI(TAG, "CHANGED TIME");
+            }
         }
         else if (strncmp(event->topic, "/eink/font-size", event->topic_len) == 0)
         {
-            mqtt_data.font = (short)strtol(event->data, NULL, 10) % 5;
-            ESP_LOGI(TAG, "CHANGED FONT - TODO");
+            if (mqtt_data.locked == false)
+            {
+                mqtt_data.font = (short)strtol(event->data, NULL, 10) % 5;
+                ESP_LOGI(TAG, "CHANGED FONT - TODO");
+            }
         }
         else
         {
@@ -133,10 +164,11 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     mqtt_data = (ms_board_configuration){
-        .data = "Example String",
-        .data_len = sizeof("Example String"),
-        .display_time = 30,
+        .data = "Display not connected to a mqtt server",
+        .data_len = strlen("Display not connected to a mqtt server"),
+        .display_time = 20,
         .font = 2,
+        .locked = true,
     };
 
     ESP_ERROR_CHECK(example_connect());

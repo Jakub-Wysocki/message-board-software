@@ -67,7 +67,7 @@ void e_paper_task(void *pvParameter)
         iot_epaper_clean_paint(device, UNCOLORED);
 
         ESP_LOGI(TAG, "DATA_PTR->FONT = %hd", data_ptr->font);
-        iot_epaper_draw_string(device, 50, 50, data_ptr->data, *(epaper_font_array+data_ptr->font) , COLORED);
+        iot_epaper_draw_string(device, 200, 240, data_ptr->data, *(epaper_font_array+data_ptr->font) , COLORED);
 
         iot_epaper_display_frame(device, NULL);
         ESP_LOGI(TAG, "Displayed");
