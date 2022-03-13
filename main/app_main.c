@@ -52,14 +52,13 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
         msg_id = esp_mqtt_client_subscribe(client, "/eink/font-size", 0);
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
-        strcpy(mqtt_data.data, "Device connected. No message");
+        strcpy(mqtt_data.data, "Device connected with server. No message");
         mqtt_data.data_len = strlen("Device connected. No message");
 
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
         strcpy(mqtt_data.data, "Display not connected to a mqtt server");
-
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
@@ -77,6 +76,7 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 
         if (strncmp(event->topic, "/eink/message", event->topic_len) == 0)
         {
+                memset(mqtt_data.data, 0, 128);
                 strncpy(mqtt_data.data, event->data, event->data_len);
                 mqtt_data.data_len = event->data_len;
                 ESP_LOGI(TAG, "CHANGED MESSAGE");
@@ -140,8 +140,8 @@ void app_main(void)
     mqtt_data = (ms_board_configuration){
         .data = "Display not connected to a mqtt server",
         .data_len = strlen("Display not connected to a mqtt server"),
-        .display_time = 30,
-        .font = 4,
+        .display_time = 20,
+        .font = 3,
     };
 
     ESP_ERROR_CHECK(example_connect());

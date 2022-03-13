@@ -33,6 +33,7 @@ void e_paper_task(void *pvParameter)
 {
     epaper_handle_t device = NULL;
     ms_board_configuration *data_ptr = (ms_board_configuration *)pvParameter;
+    char current_message[128] = {0};
 
     epaper_conf_t epaper_conf = {
         .busy_pin = BUSY_PIN,
@@ -57,22 +58,33 @@ void e_paper_task(void *pvParameter)
         .color_inv = 0,
     };
 
+
+    
+
     ESP_LOGI(TAG, "Before ePaper driver init, heap: %d", esp_get_free_heap_size());
     device = iot_epaper_create(NULL, &epaper_conf);
     iot_epaper_clear(device);
+
+    strcpy(current_message, data_ptr->data);
+    iot_set_background(device, IMAGE_DATA);
+    iot_epaper_draw_string(device, 100, 240, current_message, *(epaper_font_array+data_ptr->font) , COLORED);
+    iot_epaper_display_frame(device, NULL);
     
     while (1)
     {
 
-        iot_set_background(device, IMAGE_DATA);
+        if(strcmp(current_message, data_ptr->data )) //message changed
+        {
+            iot_epaper_clear(device);
+            iot_set_background(device, IMAGE_DATA);
 
-        ESP_LOGI(TAG, "DATA_PTR->FONT = %hd", data_ptr->font);
-        iot_epaper_draw_string(device, 200, 240, data_ptr->data, *(epaper_font_array+data_ptr->font) , COLORED);
+            memset(current_message, 0, 128);
+            strcpy(current_message, data_ptr->data);
+            iot_epaper_draw_string(device, 100, 240, current_message, *(epaper_font_array+data_ptr->font) , COLORED);
+            iot_epaper_display_frame(device, NULL);
+            ESP_LOGI(TAG, "Changed message");
+        }
 
-        iot_epaper_display_frame(device, NULL);
-        
-        ESP_LOGI(TAG, "Displayed");
-        vTaskDelay(1000 * data_ptr->display_time / portTICK_PERIOD_MS);
-        
+        vTaskDelay(1000 * data_ptr->display_time / portTICK_PERIOD_MS);        
     }
 }

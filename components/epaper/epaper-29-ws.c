@@ -157,7 +157,6 @@ static void iot_epaper_send_data(epaper_handle_t dev, const uint8_t *data, int l
     device->dc.dc_io = device->pin.dc_pin;
     device->dc.dc_level = device->pin.dc_lev_data;
     iot_epaper_send(device->bus, data, length, &device->dc);
-    ESP_LOGI(TAG, "SPI data sent %d", length);
 }
 
 static void iot_epaper_paint_init(epaper_handle_t dev, unsigned char* image, int width, int height)
