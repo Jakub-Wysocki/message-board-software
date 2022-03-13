@@ -605,6 +605,18 @@ void iot_epaper_draw_vertical_line(epaper_handle_t dev, int x, int y, int height
     xSemaphoreGiveRecursive(device->spi_mux);
 }
 
+void iot_set_background(epaper_handle_t dev, const unsigned char* frame_buffer)
+{
+
+    if(frame_buffer != NULL)
+    {
+        epaper_dev_t* device = (epaper_dev_t*) dev;
+
+        memcpy(device->paint.image, frame_buffer, 48000);
+
+    }
+}
+
 
 void iot_epaper_wait_idle(epaper_handle_t dev)
 {

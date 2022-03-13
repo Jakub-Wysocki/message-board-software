@@ -60,16 +60,17 @@ void e_paper_task(void *pvParameter)
     ESP_LOGI(TAG, "Before ePaper driver init, heap: %d", esp_get_free_heap_size());
     device = iot_epaper_create(NULL, &epaper_conf);
     iot_epaper_clear(device);
-
+    
     while (1)
     {
 
-        iot_epaper_clean_paint(device, UNCOLORED);
+        iot_set_background(device, IMAGE_DATA);
 
         ESP_LOGI(TAG, "DATA_PTR->FONT = %hd", data_ptr->font);
         iot_epaper_draw_string(device, 200, 240, data_ptr->data, *(epaper_font_array+data_ptr->font) , COLORED);
 
         iot_epaper_display_frame(device, NULL);
+        
         ESP_LOGI(TAG, "Displayed");
         vTaskDelay(1000 * data_ptr->display_time / portTICK_PERIOD_MS);
         

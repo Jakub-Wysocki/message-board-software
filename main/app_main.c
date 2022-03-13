@@ -140,8 +140,8 @@ void app_main(void)
     mqtt_data = (ms_board_configuration){
         .data = "Display not connected to a mqtt server",
         .data_len = strlen("Display not connected to a mqtt server"),
-        .display_time = 20,
-        .font = 2,
+        .display_time = 30,
+        .font = 4,
     };
 
     ESP_ERROR_CHECK(example_connect());

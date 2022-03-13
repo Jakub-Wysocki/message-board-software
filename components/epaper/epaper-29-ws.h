@@ -267,5 +267,15 @@ void iot_epaper_display_frame(epaper_handle_t dev, const unsigned char* frame_bu
 void iot_epaper_sleep(epaper_handle_t dev);
 
 
+
+/**
+ * @brief   This function sets frame_buffer array as drawing background
+ *
+ * @param   dev object handle of epaper
+ * @param   frame_buffer array containg image to be displayed in background
+ */
+void iot_set_background(epaper_handle_t dev, const unsigned char* frame_buffer);
+
+
 #endif  //_IOT_E_PAPER_29_H_
 
