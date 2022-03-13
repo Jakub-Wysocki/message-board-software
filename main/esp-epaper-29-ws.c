@@ -44,7 +44,7 @@ void e_paper_task(void *pvParameter)
         .sck_pin = SCK_PIN,
 
         .rst_active_level = 0,
-        .busy_active_level = 1,
+        .busy_active_level = 0,
 
         .dc_lev_data = 1,
         .dc_lev_cmd = 0,
