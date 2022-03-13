@@ -276,6 +276,8 @@ void iot_epaper_sleep(epaper_handle_t dev);
  */
 void iot_set_background(epaper_handle_t dev, const unsigned char* frame_buffer);
 
+int iot_center_text(int length, int letter_width, int screen_width);
+
 
 #endif  //_IOT_E_PAPER_29_H_
 

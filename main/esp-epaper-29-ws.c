@@ -67,7 +67,8 @@ void e_paper_task(void *pvParameter)
 
     strcpy(current_message, data_ptr->data);
     iot_set_background(device, IMAGE_DATA);
-    iot_epaper_draw_string(device, 100, 240, current_message, *(epaper_font_array+data_ptr->font) , COLORED);
+    int position = iot_center_text(strlen(current_message), (*(epaper_font_array+data_ptr->font))->width, epaper_conf.width );
+    iot_epaper_draw_string(device, position , 240, current_message, *(epaper_font_array+data_ptr->font) , COLORED);
     iot_epaper_display_frame(device, NULL);
     
     while (1)
@@ -80,7 +81,8 @@ void e_paper_task(void *pvParameter)
 
             memset(current_message, 0, 128);
             strcpy(current_message, data_ptr->data);
-            iot_epaper_draw_string(device, 100, 240, current_message, *(epaper_font_array+data_ptr->font) , COLORED);
+            position = iot_center_text(strlen(current_message), (*(epaper_font_array+data_ptr->font))->width, epaper_conf.width );
+            iot_epaper_draw_string(device, position, 240, current_message, *(epaper_font_array+data_ptr->font) , COLORED);
             iot_epaper_display_frame(device, NULL);
             ESP_LOGI(TAG, "Changed message");
         }

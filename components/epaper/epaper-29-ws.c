@@ -436,6 +436,17 @@ void iot_epaper_clean_paint(epaper_handle_t dev, int colored)
     xSemaphoreGiveRecursive(device->spi_mux);
 }
 
+int iot_center_text(int length, int letter_width, int screen_width)
+{
+    int txt_size = letter_width*length;
+
+    if(txt_size >= screen_width) //this should wrap the text, but it is TODO
+        return 0;
+
+    return (screen_width - txt_size) / 2; 
+}
+
+
 void iot_epaper_clear(epaper_handle_t dev)
 {
 
